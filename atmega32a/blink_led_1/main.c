@@ -9,17 +9,20 @@
 #include <util/delay.h>
 
 
+#ifndef F_CPU
+#define F_CPU 16000000UL    /* 16 MHz clock speed */
+#endif
+
 int
 main(void)
 {
-    DDRB = 0x08;
+    DDRC = 0xFF;            /* Nakes PORTC as output */
 
     while (1)
     {
-        PORTB = 0x00;
-        _delay_ms(500);
-        PORTB = 0x08;
-        _delay_ms(500);
+        PORTC = 0xFF;       /* turn all leds on */
+        _delay_ms(500);     /* 0.5s delay */
+        PORTB = 0x00;       /* all leds off */
+        _delay_ms(500);     /* delay again */
     }
-    return 0;
 }

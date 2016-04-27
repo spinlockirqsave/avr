@@ -100,7 +100,7 @@
  100               		.stabn	162,0,0,0
  101               		.stabn	162,0,0,0
  102               		.section	.text.startup,"ax",@progbits
- 103               		.stabs	"main:F(0,1)",36,0,13,main
+ 103               		.stabs	"main:F(0,1)",36,0,17,main
  104               	.global	main
  105               		.type	main, @function
  106               	main:
@@ -116,29 +116,33 @@
    9:main.c        **** #include <util/delay.h>
   10:main.c        **** 
   11:main.c        **** 
-  12:main.c        **** int
-  13:main.c        **** main(void)
-  14:main.c        **** {
- 108               		.stabn	68,0,14,.LM0-.LFBB1
+  12:main.c        **** #ifndef F_CPU
+  13:main.c        **** #define F_CPU 16000000UL    /* 16 MHz clock speed */
+  14:main.c        **** #endif
+  15:main.c        **** 
+  16:main.c        **** int
+  17:main.c        **** main(void)
+  18:main.c        **** {
+ 108               		.stabn	68,0,18,.LM0-.LFBB1
  109               	.LM0:
  110               	.LFBB1:
  111               	/* prologue: function */
  112               	/* frame size = 0 */
  113               	/* stack size = 0 */
  114               	.L__stack_usage = 0
-  15:main.c        ****     DDRB = 0x08;
- 115               		.stabn	68,0,15,.LM1-.LFBB1
+  19:main.c        ****     DDRC = 0xFF;            /* Nakes PORTC as output */
+ 115               		.stabn	68,0,19,.LM1-.LFBB1
  116               	.LM1:
- 117 0000 88E0      		ldi r24,lo8(8)
- 118 0002 87BB      		out 0x17,r24
+ 117 0000 8FEF      		ldi r24,lo8(-1)
+ 118 0002 84BB      		out 0x14,r24
  119               	.L2:
-  16:main.c        **** 
-  17:main.c        ****     while (1)
-  18:main.c        ****     {
-  19:main.c        ****         PORTB = 0x00;
- 120               		.stabn	68,0,19,.LM2-.LFBB1
+  20:main.c        **** 
+  21:main.c        ****     while (1)
+  22:main.c        ****     {
+  23:main.c        ****         PORTC = 0xFF;       /* turn all leds on */
+ 120               		.stabn	68,0,23,.LM2-.LFBB1
  121               	.LM2:
- 122 0004 18BA      		out 0x18,__zero_reg__
+ 122 0004 85BB      		out 0x15,r24
  123               	.LBB6:
  124               	.LBB7:
  125               		.stabs	"/usr/lib/avr/include/util/delay.h",132,0,0,.Ltext1
@@ -321,11 +325,11 @@
  139               	.LBE6:
  140               		.stabs	"main.c",132,0,0,.Ltext2
  141               	.Ltext2:
-  20:main.c        ****         _delay_ms(500);
-  21:main.c        ****         PORTB = 0x08;
- 142               		.stabn	68,0,21,.LM4-.LFBB1
+  24:main.c        ****         _delay_ms(500);     /* 0.5s delay */
+  25:main.c        ****         PORTB = 0x00;       /* all leds off */
+ 142               		.stabn	68,0,25,.LM4-.LFBB1
  143               	.LM4:
- 144 0018 88BB      		out 0x18,r24
+ 144 0018 18BA      		out 0x18,__zero_reg__
  145               	.LBB8:
  146               	.LBB9:
  147               		.stabs	"/usr/lib/avr/include/util/delay.h",132,0,0,.Ltext3
@@ -354,11 +358,11 @@
  170               		.ident	"GCC: (GNU) 4.8.1"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 main.c
-     /tmp/cczRVERY.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/cczRVERY.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/cczRVERY.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/cczRVERY.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/cczRVERY.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/cczRVERY.s:106    .text.startup:0000000000000000 main
+     /tmp/cclaDJQy.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/cclaDJQy.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/cclaDJQy.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/cclaDJQy.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/cclaDJQy.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/cclaDJQy.s:106    .text.startup:0000000000000000 main
 
 NO UNDEFINED SYMBOLS
