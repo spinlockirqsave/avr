@@ -1,6 +1,6 @@
 /*
  * @file    main.c
- * @brief   Blink leds.
+ * @brief   Blink leds on PORTA 0.
  * @date    27 Apr 2016 01:47 PM
  */
 
@@ -9,8 +9,6 @@
 #include <util/delay.h>
 
 
-#define __DELAY_BACKWARD_COMPATIBLE__
-
 #ifndef F_CPU
 #define F_CPU 16000000UL    /* 16 MHz clock speed */
 #endif
@@ -18,14 +16,26 @@
 int
 main(void)
 {
-    DDRA |= (1<<PA0);            /* Nakes PORTA as output,
+    DDRA = 0xFF;            /* Nakes PORTA as output,
                              * mark all 8 pins as output  */
 
     while (1)
     {
-        PORTA |= (1<<PA0);         /* turn 1st led on */
-        _delay_ms(150);             /* 0.15s delay, is on by 10ms */
-        PORTA &= ~(1<<PA0);          /* turn led off */
-        _delay_ms(10);             /* delay 0.01s, is off by 150ms */
+        PORTA = 0x01;       /* turn 1st led on */
+        _delay_ms(50);     /* 0.5s delay */
+        PORTA = 0x02;       /* turn 2nd led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x04;       /* turn 3d led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x08;       /* turn 4th led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x10;       /* turn 5th led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x20;       /* turn 6th led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x40;       /* turn 7th led on */
+        _delay_ms(50);     /* delay again */
+        PORTA = 0x80;       /* turn 8th led on */
+        _delay_ms(50);     /* delay again */
     }
 }
