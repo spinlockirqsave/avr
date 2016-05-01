@@ -1,4 +1,3 @@
-baud=19200
 src=main
 avrType=atmega32a
 avrTypeDesc=m32
@@ -41,7 +40,7 @@ elf:	object
 
 hex:    elf
 	avr-objcopy -j .text -j .data -O ihex $(src).elf $(src).flash.hex
-#	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $(src).elf $(src).eeprom.hex
+	avr-objcopy -j .eeprom --set-section-flags=.eeprom="alloc,load" --change-section-lma .eeprom=0 -O ihex $(src).elf $(src).eeprom.hex
 #	avr-objcopy -j .fuse -O ihex $(src).elf $(src).fuses.hex --change-section-lma .fuse=0
 #	srec_cat $(src).fuses.hex -Intel -crop 0x00 0x01 -offset  0x00 -O $(src).lfuse.hex -Intel
 #	srec_cat $(src).fuses.hex -Intel -crop 0x01 0x02 -offset -0x01 -O $(src).hfuse.hex -Intel
@@ -52,25 +51,26 @@ disassemble: elf
 	avr-objdump -C -d $(src).elf 2>&1
 
 eeprom: hex
-	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -b$(baud) -v -U eeprom:w:$(src).eeprom.hex
+	avrdude -p$(avrTypeDesc) -c$(programmerType) -B 5 -v -U eeprom:w:$(src).eeprom.hex
 	date
 
 fuses: hex
-	avrdude -p $(avrTypeDesc) -c$(programmerType) -b$(baud) -v -U lfuse:w:$(src).lfuse.hex
-	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -b$(baud) -v -U hfuse:w:$(src).hfuse.hex
-	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -b$(baud) -v -U efuse:w:$(src).efuse.hex
+	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -v -U lfuse:w:$(src).lfuse.hex
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U hfuse:w:$(src).hfuse.hex
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U efuse:w:$(src).efuse.hex
 	date
 
 dumpelf: elf
 	avr-objdump -s -h $(src).elf
 
 program: flash eeprom fuses
+program2: flash
 
 flash: hex
-	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -e -U flash:w:$(src).flash.hex
+	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -e -u -U flash:w:$(src).flash.hex
 	date
 
 backup:
 	@for memory in $(memoryTypes); do \
-        avrdude -p $(avrType) -c$(programmerType) -b$(baud) -v -U $$memory:r:./$(avrType).$$memory.hex:i; \
+        avrdude -p $(avrType) -c$(programmerType) -v -U $$memory:r:./$(avrType).$$memory.hex:i; \
     done

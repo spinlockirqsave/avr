@@ -1,4 +1,3 @@
-baud=19200
 src=main
 avrType=atmega32a
 avrTypeDesc=m32
@@ -57,8 +56,8 @@ eeprom: hex
 
 fuses: hex
 	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -v -U lfuse:w:$(src).lfuse.hex
-	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -b$(baud) -v -U hfuse:w:$(src).hfuse.hex
-	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -b$(baud) -v -U efuse:w:$(src).efuse.hex
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U hfuse:w:$(src).hfuse.hex
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U efuse:w:$(src).efuse.hex
 	date
 
 dumpelf: elf
@@ -73,5 +72,5 @@ flash: hex
 
 backup:
 	@for memory in $(memoryTypes); do \
-        avrdude -p $(avrType) -c$(programmerType) -b$(baud) -v -U $$memory:r:./$(avrType).$$memory.hex:i; \
+        avrdude -p $(avrType) -c$(programmerType) -v -U $$memory:r:./$(avrType).$$memory.hex:i; \
     done
