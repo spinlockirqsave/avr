@@ -63,8 +63,8 @@ fuses: hex
 dumpelf: elf
 	avr-objdump -s -h $(src).elf
 
-program: flash eeprom fuses
-program2: flash
+program: flash
+program-all: flash eeprom fuses
 
 flash: hex
 	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -e -u -U flash:w:$(src).flash.hex
