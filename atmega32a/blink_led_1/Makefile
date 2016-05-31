@@ -22,7 +22,7 @@ help:
 	@echo 'help			Show this text.'
 	@echo 'hex			Create all hex files for flash, eeprom and fuses.'
 	@echo 'object		Create $(src).o'
-	@echo 'program		Do all programming to controller.'
+	@echo 'program		Do all the programming to controller.'
 
 
 #all: object elf hex
