@@ -22,7 +22,7 @@ main(void)
     while (1)
     {
         PORTA = 0x01;       /* turn 1st led on */
-        _delay_ms(16);     /* 0.5s delay */
+        _delay_ms(16);     /* 16ms delay */
         PORTA = 0x02;       /* turn 2nd led on */
         _delay_ms(14);     /* delay again */
         PORTA = 0x04;       /* turn 3d led on */
