@@ -30,4 +30,5 @@ main(void)
     } else {
         PORTC = 0x00;
     }
+    return 0;
 }
