@@ -7,15 +7,15 @@
  */
 
 
-#include <avr/io.h>
-#include <util/delay.h>
-
-
 #define __DELAY_BACKWARD_COMPATIBLE__
 
 #ifndef F_CPU
 #define F_CPU 16000000UL    /* 16 MHz clock speed */
 #endif
+
+#include <avr/io.h>
+#include <util/delay.h>
+
 
 int
 main(void)
