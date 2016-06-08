@@ -10,7 +10,7 @@
 #define __DELAY_BACKWARD_COMPATIBLE__
 
 #ifndef F_CPU
-#define F_CPU 16000000UL    /* 16 MHz clock speed */
+#define F_CPU 1000000UL    /* 1 MHz clock speed */
 #endif
 
 #include <avr/io.h>
@@ -20,15 +20,15 @@
 int
 main(void)
 {
-    DDRC = 0x0F;
-    PORTC = 0x0C;
-     
-    /* lets assume a 4V supply comes to PORTC.6 and Vcc = 5V */
-    if (PINC == 0b01000000) {
-        PORTC = 0x0B;
-        _delay_ms(1000);    /* delay 1s */
-    } else {
-        PORTC = 0x00;
+    DDRC = 0x0F;    /* 00001111 */
+    PORTC = 0x0C;   /* set HIGH pin PC3 and PC2 00001100 */
+
+    while(1) {
+        if (PINC == 0b01000000) { /* lets assume a 4V supply comes to PORTC.6 and Vcc = 5V */
+            PORTC = 0x0B;       /* 00001011 but don't touch pin PC2 - it stays LOW */
+            _delay_ms(1000);    /* delay 1s */
+        } else {
+            PORTC = 0x00;
+        }
     }
-    return 0;
 }
