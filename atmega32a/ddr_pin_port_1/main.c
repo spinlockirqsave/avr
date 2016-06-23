@@ -19,14 +19,18 @@
 int
 main(void) {
     DDRC = 0x0F;    /* 00001111, set lower nibble of PORTC to OUTPUT, upper nibble to INPUT */
-    PORTC = 0x0C;   /* set HIGH PORT PC3 and PC2 00001100 */
+    PORTC = 0xFC;   /* set HIGH PORTC.3 and PORTC.2 00001100, Low PORTC.1 PORTC.0 and set pull-ups on all INPUT pins */
 
     while(1) {
-        if (PINC == 0b01000000) { /* lets assume a 4V supply comes to PORTC.6 and Vcc = 5V */
-            PORTC = 0x0B;       /* 00001011 but don't touch PORT PC2 - it stays LOW */
+        if (PINC & (1 << PC6)) { /* lets assume a 4V supply comes to PORTC.6 and Vcc = 5V */
+            PORTC |= (1 << PC3);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
+            PORTC |= (1 << PC1);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
+            PORTC |= (1 << PC0);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
             _delay_ms(1000);    /* delay 1s */
         } else {
-            PORTC = 0x00;       /* turn off all PORTs */
+            PORTC &= ~(1 << PC3);       /* turn off all output pins */
+            PORTC &= (1 << PC1);       /* turn off all output pins */
+            PORTC &= (1 << PC0);       /* turn off all output pins */
         }
     }
 }
