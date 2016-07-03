@@ -60,6 +60,12 @@ fuses: hex
 	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U efuse:w:$(src).efuse.hex
 	date
 
+fuses_JTAG_disable: hex
+	avrdude -p $(avrTypeDesc) -c$(programmerType) -B 5 -v -U hfuse:w:0xD9:m
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U hfuse:w:$(src).hfuse.hex
+	#avrdude -p$(avrType) -c$(programmerType) -P$(programmerDev) -v -U efuse:w:$(src).efuse.hex
+	date
+
 dumpelf: elf
 	avr-objdump -s -h $(src).elf
 

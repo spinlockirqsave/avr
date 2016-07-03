@@ -1,8 +1,8 @@
 /*
  * @file    main.c
  * @brief   Set PORTC I/O pins using data direction register,
- *          read input from pins and set high PORTC.0 2 and 3
- *          if input pin PORTC.6 is high.
+ *          read input from pins and set high PORTC.0 1 and 3
+ *          if input pin PORTC.6 is high. PORTC2 stays HIGH always.
  * @date    06 Jun 2016 10:28 PM
  */
 
@@ -23,14 +23,15 @@ main(void) {
 
     while(1) {
         if (PINC & (1 << PC6)) { /* lets assume a 4V supply comes to PORTC.6 and Vcc = 5V */
-            PORTC |= (1 << PC3);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
-            PORTC |= (1 << PC1);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
-            PORTC |= (1 << PC0);       /* 00001011 but don't touch PORT PC2 - it stays LOW */
+            PORTC |= (1 << PC3);       /* 00001011 but don't touch PORT PC2 - it stays HIGH */
+            PORTC |= (1 << PC1);       /* 00001011 but don't touch PORT PC2 - it stays HIGH */
+            PORTC |= (1 << PC0);       /* 00001011 but don't touch PORT PC2 - it stays HIGH */
             _delay_ms(1000);    /* delay 1s */
         } else {
             PORTC &= ~(1 << PC3);       /* turn off all output pins */
-            PORTC &= (1 << PC1);       /* turn off all output pins */
-            PORTC &= (1 << PC0);       /* turn off all output pins */
+            PORTC &= ~(1 << PC1);       /* turn off all output pins */
+            PORTC &= ~(1 << PC0);       /* turn off all output pins */
+            _delay_ms(1000);    /* delay 1s */
         }
     }
 }
