@@ -44,7 +44,7 @@ uint8_t V_REF = 5;  /* 5V reference */
 /* @brief   Initialize ADC */
 void adc_init(void) {
     ADMUX = 1 << REFS0; /* set up voltage reference to AVCC */
-    ADCSRA = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);   /* set prescaler mode to 128 (min resolution) */
+    ADCSRA = (1 << ADPS2);   /* set prescaler mode to 16: 1MHz/16 = 62.5kHz so it fits into 50kHz - 200kHz suggested in datasheet */
     ADCSRA |= (1 << ADEN); /* enable ADC */
 }
 
