@@ -99,7 +99,7 @@
   99               		.stabs	"__fuse_t:t(6,1)=(6,2)=s2low:(0,11),0,8;high:(0,11),8,8;;",128,0,252,0
  100               		.stabn	162,0,0,0
  101               		.stabn	162,0,0,0
- 102               		.stabs	"adc_init:F(0,47)",36,0,35,adc_init
+ 102               		.stabs	"adc_init:F(0,47)",36,0,45,adc_init
  103               	.global	adc_init
  104               		.type	adc_init, @function
  105               	adc_init:
@@ -108,377 +108,475 @@
    2:main.c        ****  * @file    main.c
    3:main.c        ****  * @brief   Photocell 1. Read the light sensor signal through ADC,
    4:main.c        ****  *          flash LEDs accordingly to digitized analog input signal.
-   5:main.c        ****  * @date    27 Aug 2016 05:50 PM
-   6:main.c        ****  */
-   7:main.c        **** 
-   8:main.c        **** 
-   9:main.c        **** #define __DELAY_BACKWARD_COMPATIBLE__
-  10:main.c        **** 
-  11:main.c        **** #ifndef F_CPU
-  12:main.c        **** #define F_CPU 1000000UL    /* 1 MHz clock speed */
-  13:main.c        **** #endif
-  14:main.c        **** 
-  15:main.c        **** #include <avr/io.h>
-  16:main.c        **** #include <util/delay.h>
+   5:main.c        ****  * @details Compile with 'make flash', i.e. JTAG enabled.
+   6:main.c        ****  *          One needs to calibrate accordingly to sensor's spectral response.
+   7:main.c        ****  *          This is wriiten for SEN 09088 mini photocell (GL5528):
+   8:main.c        ****  *          - light resistance at 10Lux(at 25*C): 8-20 KOhm
+   9:main.c        ****  *          - dark resistance at 0 Lux: 1.0 MOhm (min)
+  10:main.c        ****  *          - gamma value at 100-10 Lux: 0.7
+  11:main.c        ****  *          - power dissipation (at 25*C): 100 mW
+  12:main.c        ****  *          - max voltage (at 25*C): 150 V
+  13:main.c        ****  *          - spectral response peak (at 25*C): 540 nm
+  14:main.c        ****  *          - ambient temperature range: -30 ~ +70 *C 
+  15:main.c        ****  * @date    27 Aug 2016 05:50 PM
+  16:main.c        ****  */
   17:main.c        **** 
-  18:main.c        **** /* Voltage divider:
-  19:main.c        ****  *
-  20:main.c        ****  ********************************
-  21:main.c        ****  * Vin --
-  22:main.c        ****  *     R1
-  23:main.c        ****  *     -----Vout
-  24:main.c        ****  *     R2
-  25:main.c        ****  *     gnd
-  26:main.c        ****  *******************************
-  27:main.c        ****  *
-  28:main.c        ****  * Vout = Vin * R2 / (R1 + R2)
-  29:main.c        ****  */
-  30:main.c        **** 
-  31:main.c        **** 
-  32:main.c        **** uint8_t V_REF = 5;  /* 5V reference */
-  33:main.c        **** 
-  34:main.c        **** /* Initialize ADC */
-  35:main.c        **** void adc_init(void) {
- 107               		.stabn	68,0,35,.LM0-.LFBB1
+  18:main.c        **** 
+  19:main.c        **** #define __DELAY_BACKWARD_COMPATIBLE__
+  20:main.c        **** 
+  21:main.c        **** #ifndef F_CPU
+  22:main.c        **** #define F_CPU 1000000UL    /* 1 MHz clock speed */
+  23:main.c        **** #endif
+  24:main.c        **** 
+  25:main.c        **** #include <avr/io.h>
+  26:main.c        **** #include <util/delay.h>
+  27:main.c        **** 
+  28:main.c        **** /* Voltage divider:
+  29:main.c        ****  *
+  30:main.c        ****  ********************************
+  31:main.c        ****  * Vin --
+  32:main.c        ****  *     R1 (6.67 kOhm used)
+  33:main.c        ****  *     -----Vout (to ADC port 0)
+  34:main.c        ****  *     R2 (photocell)
+  35:main.c        ****  *     gnd
+  36:main.c        ****  *******************************
+  37:main.c        ****  *
+  38:main.c        ****  * Vout = Vin * R2 / (R1 + R2)
+  39:main.c        ****  */
+  40:main.c        **** 
+  41:main.c        **** 
+  42:main.c        **** uint8_t V_REF = 5;  /* 5V reference */
+  43:main.c        **** 
+  44:main.c        **** /* @brief   Initialize ADC */
+  45:main.c        **** void adc_init(void) {
+ 107               		.stabn	68,0,45,.LM0-.LFBB1
  108               	.LM0:
  109               	.LFBB1:
  110               	/* prologue: function */
  111               	/* frame size = 0 */
  112               	/* stack size = 0 */
  113               	.L__stack_usage = 0
-  36:main.c        ****     ADMUX = 1 << REFS0; /* set up voltage reference to AVCC */
- 114               		.stabn	68,0,36,.LM1-.LFBB1
+  46:main.c        ****     ADMUX = 1 << REFS0; /* set up voltage reference to AVCC */
+ 114               		.stabn	68,0,46,.LM1-.LFBB1
  115               	.LM1:
  116 0000 80E4      		ldi r24,lo8(64)
  117 0002 87B9      		out 0x7,r24
-  37:main.c        ****     ADCSRA = (1 << ADEN); /* enable ADC */
- 118               		.stabn	68,0,37,.LM2-.LFBB1
+  47:main.c        ****     ADCSRA = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);   /* set prescaler mode to 128 (min resolu
+ 118               		.stabn	68,0,47,.LM2-.LFBB1
  119               	.LM2:
- 120 0004 80E8      		ldi r24,lo8(-128)
+ 120 0004 87E0      		ldi r24,lo8(7)
  121 0006 86B9      		out 0x6,r24
-  38:main.c        ****     ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);   /* set prescaler mode to 128 (min resol
- 122               		.stabn	68,0,38,.LM3-.LFBB1
+  48:main.c        ****     ADCSRA |= (1 << ADEN); /* enable ADC */
+ 122               		.stabn	68,0,48,.LM3-.LFBB1
  123               	.LM3:
- 124 0008 86B1      		in r24,0x6
- 125 000a 8760      		ori r24,lo8(7)
- 126 000c 86B9      		out 0x6,r24
- 127 000e 0895      		ret
- 128               		.size	adc_init, .-adc_init
- 129               	.Lscope1:
- 130               		.stabs	"",36,0,0,.Lscope1-.LFBB1
- 131               		.stabd	78,0,0
- 132               		.stabs	"adc_read:F(5,4)",36,0,42,adc_read
- 133               		.stabs	"channel:P(5,2)",64,0,42,24
- 134               	.global	adc_read
- 135               		.type	adc_read, @function
- 136               	adc_read:
- 137               		.stabd	46,0,0
-  39:main.c        **** }
-  40:main.c        **** 
-  41:main.c        **** /* @brief   Return ADC sample. */
-  42:main.c        **** uint16_t adc_read(uint8_t channel) {
- 138               		.stabn	68,0,42,.LM4-.LFBB2
- 139               	.LM4:
- 140               	.LFBB2:
- 141               	/* prologue: function */
- 142               	/* frame size = 0 */
- 143               	/* stack size = 0 */
- 144               	.L__stack_usage = 0
-  43:main.c        ****     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
-  44:main.c        ****     ADMUX |= channel;   /* set multiplexer */
- 145               		.stabn	68,0,44,.LM5-.LFBB2
- 146               	.LM5:
- 147 0010 97B1      		in r25,0x7
-  43:main.c        ****     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
- 148               		.stabn	68,0,43,.LM6-.LFBB2
- 149               	.LM6:
- 150 0012 8770      		andi r24,lo8(7)
- 151               		.stabn	68,0,44,.LM7-.LFBB2
- 152               	.LM7:
- 153 0014 892B      		or r24,r25
- 154 0016 87B9      		out 0x7,r24
-  45:main.c        ****     ADCSRA |= (1 << ADSC);  /* start single conversion */
- 155               		.stabn	68,0,45,.LM8-.LFBB2
- 156               	.LM8:
- 157 0018 369A      		sbi 0x6,6
- 158               	.L4:
-  46:main.c        ****     while (!(ADCSRA & (1 << ADIF)));    /* allow conversion to complete, wait for ADIF flag set */
- 159               		.stabn	68,0,46,.LM9-.LFBB2
- 160               	.LM9:
- 161 001a 349B      		sbis 0x6,4
- 162 001c 00C0      		rjmp .L4
-  47:main.c        ****     ADCSRA |= (1 << ADIF);  /* clear bit, by writing 1 to it */
- 163               		.stabn	68,0,47,.LM10-.LFBB2
- 164               	.LM10:
- 165 001e 349A      		sbi 0x6,4
-  48:main.c        ****     return ADC;
- 166               		.stabn	68,0,48,.LM11-.LFBB2
- 167               	.LM11:
- 168 0020 84B1      		in r24,0x4
- 169 0022 95B1      		in r25,0x4+1
+ 124 0008 379A      		sbi 0x6,7
+ 125 000a 0895      		ret
+ 126               		.size	adc_init, .-adc_init
+ 127               	.Lscope1:
+ 128               		.stabs	"",36,0,0,.Lscope1-.LFBB1
+ 129               		.stabd	78,0,0
+ 130               		.stabs	"adc_read:F(5,4)",36,0,52,adc_read
+ 131               		.stabs	"channel:P(5,2)",64,0,52,24
+ 132               	.global	adc_read
+ 133               		.type	adc_read, @function
+ 134               	adc_read:
+ 135               		.stabd	46,0,0
   49:main.c        **** }
- 170               		.stabn	68,0,49,.LM12-.LFBB2
- 171               	.LM12:
- 172 0024 0895      		ret
- 173               		.size	adc_read, .-adc_read
- 174               	.Lscope2:
- 175               		.stabs	"",36,0,0,.Lscope2-.LFBB2
- 176               		.stabd	78,0,0
- 177               		.stabs	"ports_init:F(0,47)",36,0,52,ports_init
- 178               	.global	ports_init
- 179               		.type	ports_init, @function
- 180               	ports_init:
- 181               		.stabd	46,0,0
   50:main.c        **** 
-  51:main.c        **** /* @brief   Initialize port pins to be output direction. */
-  52:main.c        **** void ports_init(void) {
- 182               		.stabn	68,0,52,.LM13-.LFBB3
- 183               	.LM13:
- 184               	.LFBB3:
- 185               	/* prologue: function */
- 186               	/* frame size = 0 */
- 187               	/* stack size = 0 */
- 188               	.L__stack_usage = 0
-  53:main.c        ****     DDRC = 0xFF;    /* set all PORTC to OUTPUT */
- 189               		.stabn	68,0,53,.LM14-.LFBB3
+  51:main.c        **** /* @brief   Return ADC sample. */
+  52:main.c        **** uint16_t adc_read(uint8_t channel) {
+ 136               		.stabn	68,0,52,.LM4-.LFBB2
+ 137               	.LM4:
+ 138               	.LFBB2:
+ 139               	/* prologue: function */
+ 140               	/* frame size = 0 */
+ 141               	/* stack size = 0 */
+ 142               	.L__stack_usage = 0
+  53:main.c        ****     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
+  54:main.c        ****     ADMUX = (ADMUX & 0xF8) | channel;   /* set multiplexer, clear bottom 3 bits before ORing */
+ 143               		.stabn	68,0,54,.LM5-.LFBB2
+ 144               	.LM5:
+ 145 000c 97B1      		in r25,0x7
+  53:main.c        ****     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
+ 146               		.stabn	68,0,53,.LM6-.LFBB2
+ 147               	.LM6:
+ 148 000e 8770      		andi r24,lo8(7)
+ 149               		.stabn	68,0,54,.LM7-.LFBB2
+ 150               	.LM7:
+ 151 0010 987F      		andi r25,lo8(-8)
+ 152 0012 892B      		or r24,r25
+ 153 0014 87B9      		out 0x7,r24
+  55:main.c        ****     ADCSRA |= (1 << ADSC);  /* start single conversion */
+ 154               		.stabn	68,0,55,.LM8-.LFBB2
+ 155               	.LM8:
+ 156 0016 369A      		sbi 0x6,6
+ 157               	.L4:
+  56:main.c        ****     while (!(ADCSRA & (1 << ADIF)));    /* allow conversion to complete */
+ 158               		.stabn	68,0,56,.LM9-.LFBB2
+ 159               	.LM9:
+ 160 0018 349B      		sbis 0x6,4
+ 161 001a 00C0      		rjmp .L4
+  57:main.c        ****     return (ADC);
+ 162               		.stabn	68,0,57,.LM10-.LFBB2
+ 163               	.LM10:
+ 164 001c 84B1      		in r24,0x4
+ 165 001e 95B1      		in r25,0x4+1
+  58:main.c        **** }
+ 166               		.stabn	68,0,58,.LM11-.LFBB2
+ 167               	.LM11:
+ 168 0020 0895      		ret
+ 169               		.size	adc_read, .-adc_read
+ 170               	.Lscope2:
+ 171               		.stabs	"",36,0,0,.Lscope2-.LFBB2
+ 172               		.stabd	78,0,0
+ 173               		.stabs	"ports_init:F(0,47)",36,0,61,ports_init
+ 174               	.global	ports_init
+ 175               		.type	ports_init, @function
+ 176               	ports_init:
+ 177               		.stabd	46,0,0
+  59:main.c        **** 
+  60:main.c        **** /* @brief   Initialize port pins to be output direction. */
+  61:main.c        **** void ports_init(void) {
+ 178               		.stabn	68,0,61,.LM12-.LFBB3
+ 179               	.LM12:
+ 180               	.LFBB3:
+ 181               	/* prologue: function */
+ 182               	/* frame size = 0 */
+ 183               	/* stack size = 0 */
+ 184               	.L__stack_usage = 0
+  62:main.c        ****     DDRC = 0xFF;    /* set all PORTC to OUTPUT */
+ 185               		.stabn	68,0,62,.LM13-.LFBB3
+ 186               	.LM13:
+ 187 0022 8FEF      		ldi r24,lo8(-1)
+ 188 0024 84BB      		out 0x14,r24
+  63:main.c        ****     PORTC = 0x00;   /* set LOW all output port pins */
+ 189               		.stabn	68,0,63,.LM14-.LFBB3
  190               	.LM14:
- 191 0026 8FEF      		ldi r24,lo8(-1)
- 192 0028 84BB      		out 0x14,r24
-  54:main.c        ****     PORTC = 0x00;   /* set LOW all output port pins */
- 193               		.stabn	68,0,54,.LM15-.LFBB3
- 194               	.LM15:
- 195 002a 15BA      		out 0x15,__zero_reg__
- 196 002c 0895      		ret
- 197               		.size	ports_init, .-ports_init
- 198               	.Lscope3:
- 199               		.stabs	"",36,0,0,.Lscope3-.LFBB3
- 200               		.stabd	78,0,0
- 201               		.stabs	"adc_from_v:F(5,4)",36,0,59,adc_from_v
- 202               	.global	adc_from_v
- 203               		.type	adc_from_v, @function
- 204               	adc_from_v:
- 205               		.stabd	46,0,0
-  55:main.c        **** }
-  56:main.c        **** 
-  57:main.c        **** /* @brief   ADC reading from voltage.
-  58:main.c        ****  * @detaild Voltage in mV for proper arithmetic without truncation. */
-  59:main.c        **** uint16_t adc_from_v(uint16_t v) {
- 206               		.stabn	68,0,59,.LM16-.LFBB4
- 207               	.LM16:
- 208               	.LFBB4:
- 209               	/* prologue: function */
- 210               	/* frame size = 0 */
- 211               	/* stack size = 0 */
- 212               	.L__stack_usage = 0
-  60:main.c        ****     uint32_t tmp = v << 10;  /* V * 1024 */
- 213               		.stabn	68,0,60,.LM17-.LFBB4
- 214               	.LM17:
- 215 002e 60E0      		ldi r22,0
- 216 0030 70E0      		ldi r23,0
- 217 0032 782F      		mov r23,r24
- 218 0034 770F      		lsl r23
- 219 0036 770F      		lsl r23
- 220 0038 80E0      		ldi r24,0
- 221 003a 90E0      		ldi r25,0
-  61:main.c        ****     return ((tmp / (V_REF * 1000)) & 0xFFFF);
- 222               		.stabn	68,0,61,.LM18-.LFBB4
- 223               	.LM18:
- 224 003c E091 0000 		lds r30,V_REF
- 225 0040 48EE      		ldi r20,lo8(-24)
- 226 0042 53E0      		ldi r21,lo8(3)
- 227 0044 E49F      		mul r30,r20
- 228 0046 9001      		movw r18,r0
- 229 0048 E59F      		mul r30,r21
- 230 004a 300D      		add r19,r0
- 231 004c 1124      		clr __zero_reg__
- 232 004e 4427      		clr r20
- 233 0050 37FD      		sbrc r19,7
- 234 0052 4095      		com r20
- 235 0054 542F      		mov r21,r20
- 236 0056 0E94 0000 		call __udivmodsi4
-  62:main.c        **** }
- 237               		.stabn	68,0,62,.LM19-.LFBB4
- 238               	.LM19:
- 239 005a C901      		movw r24,r18
- 240 005c 0895      		ret
- 241               		.size	adc_from_v, .-adc_from_v
- 242               	.Lscope4:
- 243               		.stabs	"",36,0,0,.Lscope4-.LFBB4
- 244               		.stabd	78,0,0
- 245               		.stabs	"v_from_adc:F(5,4)",36,0,66,v_from_adc
- 246               		.stabs	"adc:P(5,4)",64,0,66,24
- 247               	.global	v_from_adc
- 248               		.type	v_from_adc, @function
- 249               	v_from_adc:
- 250               		.stabd	46,0,0
-  63:main.c        **** 
-  64:main.c        **** /* @brief   Voltage reading from ADC sample.
-  65:main.c        ****  * @details Result in mV. */
-  66:main.c        **** uint16_t v_from_adc(uint16_t adc) {
- 251               		.stabn	68,0,66,.LM20-.LFBB5
- 252               	.LM20:
- 253               	.LFBB5:
- 254               	/* prologue: function */
- 255               	/* frame size = 0 */
- 256               	/* stack size = 0 */
- 257               	.L__stack_usage = 0
-  67:main.c        ****     uint32_t tmp = adc * V_REF *1000;
- 258               		.stabn	68,0,67,.LM21-.LFBB5
- 259               	.LM21:
- 260 005e 6091 0000 		lds r22,V_REF
- 261 0062 48EE      		ldi r20,lo8(-24)
- 262 0064 53E0      		ldi r21,lo8(3)
- 263 0066 649F      		mul r22,r20
- 264 0068 9001      		movw r18,r0
- 265 006a 659F      		mul r22,r21
- 266 006c 300D      		add r19,r0
- 267 006e 1124      		clr __zero_reg__
- 268 0070 AC01      		movw r20,r24
- 269 0072 249F      		mul r18,r20
- 270 0074 C001      		movw r24,r0
- 271 0076 259F      		mul r18,r21
- 272 0078 900D      		add r25,r0
- 273 007a 349F      		mul r19,r20
- 274 007c 900D      		add r25,r0
- 275 007e 1124      		clr r1
- 276 0080 A0E0      		ldi r26,0
- 277 0082 B0E0      		ldi r27,0
-  68:main.c        ****     return ((tmp >> 10) & 0xFFFF);
- 278               		.stabn	68,0,68,.LM22-.LFBB5
- 279               	.LM22:
- 280 0084 2AE0      		ldi r18,10
- 281               		1:
- 282 0086 B695      		lsr r27
- 283 0088 A795      		ror r26
- 284 008a 9795      		ror r25
- 285 008c 8795      		ror r24
- 286 008e 2A95      		dec r18
- 287 0090 01F4      		brne 1b
-  69:main.c        **** }
- 288               		.stabn	68,0,69,.LM23-.LFBB5
- 289               	.LM23:
- 290 0092 0895      		ret
- 291               		.size	v_from_adc, .-v_from_adc
- 292               	.Lscope5:
- 293               		.stabs	"",36,0,0,.Lscope5-.LFBB5
- 294               		.stabd	78,0,0
- 295               		.section	.text.startup,"ax",@progbits
- 296               		.stabs	"main:F(0,1)",36,0,73,main
- 297               	.global	main
- 298               		.type	main, @function
- 299               	main:
- 300               		.stabd	46,0,0
-  70:main.c        **** 
-  71:main.c        **** 
-  72:main.c        **** int
-  73:main.c        **** main(void) {
- 301               		.stabn	68,0,73,.LM24-.LFBB6
- 302               	.LM24:
- 303               	.LFBB6:
- 304               	/* prologue: function */
- 305               	/* frame size = 0 */
- 306               	/* stack size = 0 */
- 307               	.L__stack_usage = 0
-  74:main.c        ****     uint16_t adc_sample;
-  75:main.c        **** 
-  76:main.c        ****     adc_init();
- 308               		.stabn	68,0,76,.LM25-.LFBB6
- 309               	.LM25:
- 310 0000 0E94 0000 		call adc_init
- 311               	.LBB4:
- 312               	.LBB5:
-  61:main.c        **** }
- 313               		.stabn	68,0,61,.LM26-.LFBB6
- 314               	.LM26:
- 315 0004 C8EE      		ldi r28,lo8(-24)
- 316 0006 D3E0      		ldi r29,lo8(3)
- 317 0008 C12C      		mov r12,__zero_reg__
- 318 000a 30EE      		ldi r19,lo8(-32)
- 319 000c D32E      		mov r13,r19
- 320 000e E12C      		mov r14,__zero_reg__
- 321 0010 F12C      		mov r15,__zero_reg__
- 322               	.L10:
- 323               	.LBE5:
- 324               	.LBE4:
-  77:main.c        ****     while(1) {
-  78:main.c        ****         adc_sample = adc_read(1);
- 325               		.stabn	68,0,78,.LM27-.LFBB6
- 326               	.LM27:
- 327 0012 81E0      		ldi r24,lo8(1)
- 328 0014 0E94 0000 		call adc_read
- 329 0018 8C01      		movw r16,r24
- 330               	.LBB7:
- 331               	.LBB6:
-  61:main.c        **** }
- 332               		.stabn	68,0,61,.LM28-.LFBB6
- 333               	.LM28:
- 334 001a 8091 0000 		lds r24,V_REF
- 335 001e 8C9F      		mul r24,r28
- 336 0020 9001      		movw r18,r0
- 337 0022 8D9F      		mul r24,r29
- 338 0024 300D      		add r19,r0
- 339 0026 1124      		clr __zero_reg__
- 340 0028 4427      		clr r20
- 341 002a 37FD      		sbrc r19,7
- 342 002c 4095      		com r20
- 343 002e 542F      		mov r21,r20
- 344 0030 C701      		movw r24,r14
- 345 0032 B601      		movw r22,r12
- 346 0034 0E94 0000 		call __udivmodsi4
- 347               	.LBE6:
- 348               	.LBE7:
-  79:main.c        ****         if (adc_sample < adc_from_v(4600)) {
- 349               		.stabn	68,0,79,.LM29-.LFBB6
- 350               	.LM29:
- 351 0038 0217      		cp r16,r18
- 352 003a 1307      		cpc r17,r19
- 353 003c 00F4      		brsh .L11
-  80:main.c        ****             PORTC |= (1 << PC0);       /* set HIGH */
- 354               		.stabn	68,0,80,.LM30-.LFBB6
- 355               	.LM30:
- 356 003e A89A      		sbi 0x15,0
- 357 0040 00C0      		rjmp .L10
- 358               	.L11:
-  81:main.c        ****         } else {
-  82:main.c        ****             PORTC |= (0 << PC0);       /* set LOW */
- 359               		.stabn	68,0,82,.LM31-.LFBB6
- 360               	.LM31:
- 361 0042 85B3      		in r24,0x15
- 362 0044 85BB      		out 0x15,r24
- 363 0046 00C0      		rjmp .L10
- 364               		.size	main, .-main
- 365               		.stabs	"adc_sample:r(5,4)",64,0,74,16
- 366               		.stabn	192,0,0,.LFBB6-.LFBB6
- 367               		.stabn	224,0,0,.Lscope6-.LFBB6
- 368               	.Lscope6:
- 369               		.stabs	"",36,0,0,.Lscope6-.LFBB6
- 370               		.stabd	78,0,0
- 371               	.global	V_REF
- 372               		.data
- 373               		.type	V_REF, @object
- 374               		.size	V_REF, 1
- 375               	V_REF:
- 376 0000 05        		.byte	5
- 377               		.stabs	"V_REF:G(5,2)",32,0,32,0
- 378               		.text
- 379               		.stabs	"",100,0,0,.Letext0
- 380               	.Letext0:
- 381               		.ident	"GCC: (GNU) 4.8.1"
- 382               	.global __do_copy_data
+ 191 0026 15BA      		out 0x15,__zero_reg__
+ 192 0028 0895      		ret
+ 193               		.size	ports_init, .-ports_init
+ 194               	.Lscope3:
+ 195               		.stabs	"",36,0,0,.Lscope3-.LFBB3
+ 196               		.stabd	78,0,0
+ 197               		.stabs	"adc_from_v:F(5,4)",36,0,68,adc_from_v
+ 198               	.global	adc_from_v
+ 199               		.type	adc_from_v, @function
+ 200               	adc_from_v:
+ 201               		.stabd	46,0,0
+  64:main.c        **** }
+  65:main.c        **** 
+  66:main.c        **** /* @brief   ADC reading from voltage.
+  67:main.c        ****  * @details Voltage in mV for proper arithmetic without truncation. */
+  68:main.c        **** uint16_t adc_from_v(uint16_t v) {
+ 202               		.stabn	68,0,68,.LM15-.LFBB4
+ 203               	.LM15:
+ 204               	.LFBB4:
+ 205               	/* prologue: function */
+ 206               	/* frame size = 0 */
+ 207               	/* stack size = 0 */
+ 208               	.L__stack_usage = 0
+  69:main.c        ****     uint32_t tmp = v << 10;  /* V * 1024 */
+ 209               		.stabn	68,0,69,.LM16-.LFBB4
+ 210               	.LM16:
+ 211 002a 60E0      		ldi r22,0
+ 212 002c 70E0      		ldi r23,0
+ 213 002e 782F      		mov r23,r24
+ 214 0030 770F      		lsl r23
+ 215 0032 770F      		lsl r23
+ 216 0034 80E0      		ldi r24,0
+ 217 0036 90E0      		ldi r25,0
+  70:main.c        ****     return ((tmp / (V_REF * 1000)) & 0xFFFF);
+ 218               		.stabn	68,0,70,.LM17-.LFBB4
+ 219               	.LM17:
+ 220 0038 E091 0000 		lds r30,V_REF
+ 221 003c 48EE      		ldi r20,lo8(-24)
+ 222 003e 53E0      		ldi r21,lo8(3)
+ 223 0040 E49F      		mul r30,r20
+ 224 0042 9001      		movw r18,r0
+ 225 0044 E59F      		mul r30,r21
+ 226 0046 300D      		add r19,r0
+ 227 0048 1124      		clr __zero_reg__
+ 228 004a 4427      		clr r20
+ 229 004c 37FD      		sbrc r19,7
+ 230 004e 4095      		com r20
+ 231 0050 542F      		mov r21,r20
+ 232 0052 0E94 0000 		call __udivmodsi4
+  71:main.c        **** }
+ 233               		.stabn	68,0,71,.LM18-.LFBB4
+ 234               	.LM18:
+ 235 0056 C901      		movw r24,r18
+ 236 0058 0895      		ret
+ 237               		.size	adc_from_v, .-adc_from_v
+ 238               	.Lscope4:
+ 239               		.stabs	"",36,0,0,.Lscope4-.LFBB4
+ 240               		.stabd	78,0,0
+ 241               		.stabs	"v_from_adc:F(5,4)",36,0,75,v_from_adc
+ 242               		.stabs	"adc:P(5,4)",64,0,75,24
+ 243               	.global	v_from_adc
+ 244               		.type	v_from_adc, @function
+ 245               	v_from_adc:
+ 246               		.stabd	46,0,0
+  72:main.c        **** 
+  73:main.c        **** /* @brief   Voltage reading from ADC sample.
+  74:main.c        ****  * @details Result in mV. */
+  75:main.c        **** uint16_t v_from_adc(uint16_t adc) {
+ 247               		.stabn	68,0,75,.LM19-.LFBB5
+ 248               	.LM19:
+ 249               	.LFBB5:
+ 250               	/* prologue: function */
+ 251               	/* frame size = 0 */
+ 252               	/* stack size = 0 */
+ 253               	.L__stack_usage = 0
+  76:main.c        ****     uint32_t tmp = adc * V_REF *1000;
+ 254               		.stabn	68,0,76,.LM20-.LFBB5
+ 255               	.LM20:
+ 256 005a 6091 0000 		lds r22,V_REF
+ 257 005e 48EE      		ldi r20,lo8(-24)
+ 258 0060 53E0      		ldi r21,lo8(3)
+ 259 0062 649F      		mul r22,r20
+ 260 0064 9001      		movw r18,r0
+ 261 0066 659F      		mul r22,r21
+ 262 0068 300D      		add r19,r0
+ 263 006a 1124      		clr __zero_reg__
+ 264 006c AC01      		movw r20,r24
+ 265 006e 249F      		mul r18,r20
+ 266 0070 C001      		movw r24,r0
+ 267 0072 259F      		mul r18,r21
+ 268 0074 900D      		add r25,r0
+ 269 0076 349F      		mul r19,r20
+ 270 0078 900D      		add r25,r0
+ 271 007a 1124      		clr r1
+ 272 007c A0E0      		ldi r26,0
+ 273 007e B0E0      		ldi r27,0
+  77:main.c        ****     return ((tmp >> 10) & 0xFFFF);
+ 274               		.stabn	68,0,77,.LM21-.LFBB5
+ 275               	.LM21:
+ 276 0080 2AE0      		ldi r18,10
+ 277               		1:
+ 278 0082 B695      		lsr r27
+ 279 0084 A795      		ror r26
+ 280 0086 9795      		ror r25
+ 281 0088 8795      		ror r24
+ 282 008a 2A95      		dec r18
+ 283 008c 01F4      		brne 1b
+  78:main.c        **** }
+ 284               		.stabn	68,0,78,.LM22-.LFBB5
+ 285               	.LM22:
+ 286 008e 0895      		ret
+ 287               		.size	v_from_adc, .-v_from_adc
+ 288               	.Lscope5:
+ 289               		.stabs	"",36,0,0,.Lscope5-.LFBB5
+ 290               		.stabd	78,0,0
+ 291               		.section	.text.startup,"ax",@progbits
+ 292               		.stabs	"main:F(0,1)",36,0,82,main
+ 293               	.global	main
+ 294               		.type	main, @function
+ 295               	main:
+ 296               		.stabd	46,0,0
+  79:main.c        **** 
+  80:main.c        **** 
+  81:main.c        **** int
+  82:main.c        **** main(void) {
+ 297               		.stabn	68,0,82,.LM23-.LFBB6
+ 298               	.LM23:
+ 299               	.LFBB6:
+ 300               	/* prologue: function */
+ 301               	/* frame size = 0 */
+ 302               	/* stack size = 0 */
+ 303               	.L__stack_usage = 0
+  83:main.c        ****     uint16_t adc_sample;
+  84:main.c        **** 
+  85:main.c        ****     ports_init();
+ 304               		.stabn	68,0,85,.LM24-.LFBB6
+ 305               	.LM24:
+ 306 0000 0E94 0000 		call ports_init
+  86:main.c        ****     adc_init();
+ 307               		.stabn	68,0,86,.LM25-.LFBB6
+ 308               	.LM25:
+ 309 0004 0E94 0000 		call adc_init
+  87:main.c        **** 
+  88:main.c        ****     while(1) {
+  89:main.c        ****         adc_sample = adc_read(0);
+  90:main.c        ****         if (adc_sample > 900) {
+  91:main.c        ****             PORTC = 0b11111111;         /* set all HIGH */
+  92:main.c        ****         } else if (adc_sample > 900) {
+  93:main.c        ****             PORTC = 0b01111111;
+  94:main.c        ****         } else if (adc_sample > 840) {
+  95:main.c        ****             PORTC = 0b00111111;
+  96:main.c        ****         } else if (adc_sample > 780) {
+  97:main.c        ****             PORTC = 0b00011111;
+  98:main.c        ****         } else if (adc_sample > 740) {
+  99:main.c        ****             PORTC = 0b00001111;
+ 100:main.c        ****         } else if (adc_sample > 680) {
+ 101:main.c        ****             PORTC = 0b00000111;
+ 102:main.c        ****         } else if (adc_sample > 620) {
+ 103:main.c        ****             PORTC = 0b00000011;
+ 104:main.c        ****         } else if (adc_sample > 560) {
+ 105:main.c        ****             PORTC = 0b00000001;
+ 310               		.stabn	68,0,105,.LM26-.LFBB6
+ 311               	.LM26:
+ 312 0008 C1E0      		ldi r28,lo8(1)
+ 103:main.c        ****         } else if (adc_sample > 560) {
+ 313               		.stabn	68,0,103,.LM27-.LFBB6
+ 314               	.LM27:
+ 315 000a D3E0      		ldi r29,lo8(3)
+ 101:main.c        ****         } else if (adc_sample > 620) {
+ 316               		.stabn	68,0,101,.LM28-.LFBB6
+ 317               	.LM28:
+ 318 000c 17E0      		ldi r17,lo8(7)
+  99:main.c        ****         } else if (adc_sample > 680) {
+ 319               		.stabn	68,0,99,.LM29-.LFBB6
+ 320               	.LM29:
+ 321 000e 0FE0      		ldi r16,lo8(15)
+  97:main.c        ****         } else if (adc_sample > 740) {
+ 322               		.stabn	68,0,97,.LM30-.LFBB6
+ 323               	.LM30:
+ 324 0010 3FE1      		ldi r19,lo8(31)
+ 325 0012 F32E      		mov r15,r19
+  95:main.c        ****         } else if (adc_sample > 780) {
+ 326               		.stabn	68,0,95,.LM31-.LFBB6
+ 327               	.LM31:
+ 328 0014 4FE3      		ldi r20,lo8(63)
+ 329 0016 E42E      		mov r14,r20
+  91:main.c        ****         } else if (adc_sample > 900) {
+ 330               		.stabn	68,0,91,.LM32-.LFBB6
+ 331               	.LM32:
+ 332 0018 DD24      		clr r13
+ 333 001a DA94      		dec r13
+ 334               	.L10:
+  89:main.c        ****         if (adc_sample > 900) {
+ 335               		.stabn	68,0,89,.LM33-.LFBB6
+ 336               	.LM33:
+ 337 001c 80E0      		ldi r24,0
+ 338 001e 0E94 0000 		call adc_read
+  90:main.c        ****             PORTC = 0b11111111;         /* set all HIGH */
+ 339               		.stabn	68,0,90,.LM34-.LFBB6
+ 340               	.LM34:
+ 341 0022 8538      		cpi r24,-123
+ 342 0024 23E0      		ldi r18,3
+ 343 0026 9207      		cpc r25,r18
+ 344 0028 00F0      		brlo .L11
+  91:main.c        ****         } else if (adc_sample > 900) {
+ 345               		.stabn	68,0,91,.LM35-.LFBB6
+ 346               	.LM35:
+ 347 002a D5BA      		out 0x15,r13
+ 348 002c 00C0      		rjmp .L10
+ 349               	.L11:
+  94:main.c        ****             PORTC = 0b00111111;
+ 350               		.stabn	68,0,94,.LM36-.LFBB6
+ 351               	.LM36:
+ 352 002e 8934      		cpi r24,73
+ 353 0030 23E0      		ldi r18,3
+ 354 0032 9207      		cpc r25,r18
+ 355 0034 00F0      		brlo .L13
+  95:main.c        ****         } else if (adc_sample > 780) {
+ 356               		.stabn	68,0,95,.LM37-.LFBB6
+ 357               	.LM37:
+ 358 0036 E5BA      		out 0x15,r14
+ 359 0038 00C0      		rjmp .L10
+ 360               	.L13:
+  96:main.c        ****             PORTC = 0b00011111;
+ 361               		.stabn	68,0,96,.LM38-.LFBB6
+ 362               	.LM38:
+ 363 003a 8D30      		cpi r24,13
+ 364 003c 23E0      		ldi r18,3
+ 365 003e 9207      		cpc r25,r18
+ 366 0040 00F0      		brlo .L14
+  97:main.c        ****         } else if (adc_sample > 740) {
+ 367               		.stabn	68,0,97,.LM39-.LFBB6
+ 368               	.LM39:
+ 369 0042 F5BA      		out 0x15,r15
+ 370 0044 00C0      		rjmp .L10
+ 371               	.L14:
+  98:main.c        ****             PORTC = 0b00001111;
+ 372               		.stabn	68,0,98,.LM40-.LFBB6
+ 373               	.LM40:
+ 374 0046 853E      		cpi r24,-27
+ 375 0048 22E0      		ldi r18,2
+ 376 004a 9207      		cpc r25,r18
+ 377 004c 00F0      		brlo .L15
+  99:main.c        ****         } else if (adc_sample > 680) {
+ 378               		.stabn	68,0,99,.LM41-.LFBB6
+ 379               	.LM41:
+ 380 004e 05BB      		out 0x15,r16
+ 381 0050 00C0      		rjmp .L10
+ 382               	.L15:
+ 100:main.c        ****             PORTC = 0b00000111;
+ 383               		.stabn	68,0,100,.LM42-.LFBB6
+ 384               	.LM42:
+ 385 0052 893A      		cpi r24,-87
+ 386 0054 22E0      		ldi r18,2
+ 387 0056 9207      		cpc r25,r18
+ 388 0058 00F0      		brlo .L16
+ 101:main.c        ****         } else if (adc_sample > 620) {
+ 389               		.stabn	68,0,101,.LM43-.LFBB6
+ 390               	.LM43:
+ 391 005a 15BB      		out 0x15,r17
+ 392 005c 00C0      		rjmp .L10
+ 393               	.L16:
+ 102:main.c        ****             PORTC = 0b00000011;
+ 394               		.stabn	68,0,102,.LM44-.LFBB6
+ 395               	.LM44:
+ 396 005e 8D36      		cpi r24,109
+ 397 0060 22E0      		ldi r18,2
+ 398 0062 9207      		cpc r25,r18
+ 399 0064 00F0      		brlo .L17
+ 103:main.c        ****         } else if (adc_sample > 560) {
+ 400               		.stabn	68,0,103,.LM45-.LFBB6
+ 401               	.LM45:
+ 402 0066 D5BB      		out 0x15,r29
+ 403 0068 00C0      		rjmp .L10
+ 404               	.L17:
+ 104:main.c        ****             PORTC = 0b00000001;
+ 405               		.stabn	68,0,104,.LM46-.LFBB6
+ 406               	.LM46:
+ 407 006a 8133      		cpi r24,49
+ 408 006c 9240      		sbci r25,2
+ 409 006e 00F0      		brlo .L18
+ 410               		.stabn	68,0,105,.LM47-.LFBB6
+ 411               	.LM47:
+ 412 0070 C5BB      		out 0x15,r28
+ 413 0072 00C0      		rjmp .L10
+ 414               	.L18:
+ 106:main.c        ****         } else {
+ 107:main.c        ****             PORTC = 0x00;               /* set all LOW */
+ 415               		.stabn	68,0,107,.LM48-.LFBB6
+ 416               	.LM48:
+ 417 0074 15BA      		out 0x15,__zero_reg__
+ 418 0076 00C0      		rjmp .L10
+ 419               		.size	main, .-main
+ 420               		.stabs	"adc_sample:r(5,4)",64,0,83,24
+ 421               		.stabn	192,0,0,.LFBB6-.LFBB6
+ 422               		.stabn	224,0,0,.Lscope6-.LFBB6
+ 423               	.Lscope6:
+ 424               		.stabs	"",36,0,0,.Lscope6-.LFBB6
+ 425               		.stabd	78,0,0
+ 426               	.global	V_REF
+ 427               		.data
+ 428               		.type	V_REF, @object
+ 429               		.size	V_REF, 1
+ 430               	V_REF:
+ 431 0000 05        		.byte	5
+ 432               		.stabs	"V_REF:G(5,2)",32,0,42,0
+ 433               		.text
+ 434               		.stabs	"",100,0,0,.Letext0
+ 435               	.Letext0:
+ 436               		.ident	"GCC: (GNU) 4.8.1"
+ 437               	.global __do_copy_data
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 main.c
-     /tmp/ccKcLToY.s:2      *ABS*:000000000000003e __SP_H__
-     /tmp/ccKcLToY.s:3      *ABS*:000000000000003d __SP_L__
-     /tmp/ccKcLToY.s:4      *ABS*:000000000000003f __SREG__
-     /tmp/ccKcLToY.s:5      *ABS*:0000000000000000 __tmp_reg__
-     /tmp/ccKcLToY.s:6      *ABS*:0000000000000001 __zero_reg__
-     /tmp/ccKcLToY.s:105    .text:0000000000000000 adc_init
-     /tmp/ccKcLToY.s:136    .text:0000000000000010 adc_read
-     /tmp/ccKcLToY.s:180    .text:0000000000000026 ports_init
-     /tmp/ccKcLToY.s:204    .text:000000000000002e adc_from_v
-     /tmp/ccKcLToY.s:375    .data:0000000000000000 V_REF
-     /tmp/ccKcLToY.s:249    .text:000000000000005e v_from_adc
-     /tmp/ccKcLToY.s:299    .text.startup:0000000000000000 main
+     /tmp/ccv8ZZY9.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccv8ZZY9.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccv8ZZY9.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccv8ZZY9.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccv8ZZY9.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccv8ZZY9.s:105    .text:0000000000000000 adc_init
+     /tmp/ccv8ZZY9.s:134    .text:000000000000000c adc_read
+     /tmp/ccv8ZZY9.s:176    .text:0000000000000022 ports_init
+     /tmp/ccv8ZZY9.s:200    .text:000000000000002a adc_from_v
+     /tmp/ccv8ZZY9.s:430    .data:0000000000000000 V_REF
+     /tmp/ccv8ZZY9.s:245    .text:000000000000005a v_from_adc
+     /tmp/ccv8ZZY9.s:295    .text.startup:0000000000000000 main
 
 UNDEFINED SYMBOLS
 __udivmodsi4
