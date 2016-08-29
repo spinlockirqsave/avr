@@ -3,6 +3,7 @@
  * @brief   Photocell 1. Read the light sensor signal through ADC,
  *          flash LEDs accordingly to digitized analog input signal.
  * @details Compile with 'make flash', i.e. JTAG enabled.
+ *          Each ADC conversion is started manually (by writing 1 to ADSC). 
  *          One needs to calibrate accordingly to sensor's spectral response.
  *          This is wriiten for SEN 09088 mini photocell (GL5528):
  *          - light resistance at 10Lux(at 25*C): 8-20 KOhm
@@ -52,7 +53,7 @@ void adc_init(void) {
 uint16_t adc_read(uint8_t channel) {
     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
     ADMUX = (ADMUX & 0xF8) | channel;   /* set multiplexer, clear bottom 3 bits before ORing */
-    ADCSRA |= (1 << ADSC);  /* start single conversion */
+    ADCSRA |= (1 << ADSC);  /* START single conversion, This bit stays high as long as the conversion is in progress and will be cleared by hardware when the conversion is completed. */
     while (!(ADCSRA & (1 << ADIF)));    /* allow conversion to complete */
     return (ADC);
 }
@@ -106,5 +107,6 @@ main(void) {
         } else {
             PORTC = 0x00;               /* set all LOW */
         }
+        _delay_loop_2(0);               /* 16 bit counter, 0 means do max loops, i.e. 65536, each of them takes 4 CPU cycles, so if F_CPU is 1MHz this does busy waiting for 261.1 milliseconds */
     }
 }
