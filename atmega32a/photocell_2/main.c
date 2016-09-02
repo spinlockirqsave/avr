@@ -17,7 +17,13 @@
  *          - power dissipation (at 25*C): 100 mW
  *          - max voltage (at 25*C): 150 V
  *          - spectral response peak (at 25*C): 540 nm
- *          - ambient temperature range: -30 ~ +70 *C 
+ *          - ambient temperature range: -30 ~ +70 *C
+ *
+ *          Signaling:
+ *          PORTD:
+ *          PD0 - flashing with 1Hz freq: malloc failure
+ *          PD1 - flashing with 2Hz freq: calibration...
+ *
  * @date    01 Sep 2016 07:39 PM
  */
 
@@ -212,7 +218,7 @@ static void adc_calibration(struct adc* me, struct adc_event* e) {
                 if (me->sma.lpos >= SMA_SAMPLES_PER_SECONDS(30)) {
                     me->sma_prev = me->sma.sma;
                     me->resolution = MIN(me->sma.sma, 255 - me->sma.sma) / 4;   /* classification segment length */
-                    PORTD &= ~(1 << PD0);
+                    PORTD ^= (~PORTD | (1 << PD1)); /* flash PD1 */
                     FSM_TRANSITION_(&me->super_, &adc_default); /* stop calibration */
                 }
                 break;
