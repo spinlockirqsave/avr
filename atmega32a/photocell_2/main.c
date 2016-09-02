@@ -53,17 +53,19 @@
  */
 
 
-#define MICROSECONDS_PER_SEC 1000000UL
-#define SMA_SAMPLES_PER_MICROSECONDS (1 / (MICROSECONDS_PER_SEC))
-#define SMA_SAMPLES_PER_SECONDS(seconds) ((seconds) * (SMA_SAMPLES_PER_MICROSECONDS) * (MICROSECONDS_PER_SEC))
+#define SMA_SAMPLES_PER_SEC 1u
+#define SMA_SAMPLES_PER_SECONDS(seconds) ((seconds) * SMA_SAMPLES_PER_SEC)
+#define SMA_FREQUENCY 15625
+#define MIN(x,y) ((x) < (y) ? (x) : (y))
 
 uint8_t V_REF = 5;  /* 5V reference */
 
 /* Derive ADC FSM from fsm */
 struct adc {
-    struct fsm  super_;
-    uint16_t    min_range;
-    uint16_t    max_range;
+    struct fsm      super_;
+    struct sma_buf  sma;
+    uint8_t         sma_prev;   /* we use uint8_t to store ADC readings */
+    uint8_t         resolution;
 };
 
 /* Derive ADC events from fsm_event */
@@ -86,12 +88,13 @@ void adc_calibration(struct adc* me, struct adc_event* e);
 void adc_flash(struct adc* me, struct adc_event* e);
 
 /* @brief   Initialize ADC */
-void adc_init(void) {
+void adc_init(struct adc * adc) {
     ADMUX = 1 << REFS0; /* set up voltage reference to AVCC */
     ADCSRA = (1 << ADPS2);   /* set prescaler mode to 16: 1MHz/16 = 62.5kHz so it fits into 50kHz - 200kHz suggested in datasheet */
     ADCSRA |= (1 << ADEN); /* enable ADC */
     TCCR1B |= ((1 << CS11) | (1 << CS10));   /* use 16 bit timer, set timer prescaler to 64 mode, 1 tick = 1 / (F_CPU/64) s => 1 tick = (1/15625)s = 0.000064s, 15625 ticks/s */
     TCNT1 = 0; /* reset/start */
+    memset(adc, 0, sizeof(struct adc));
 }
 
 /* @brief   Return ADC sample. */
@@ -128,7 +131,6 @@ uint16_t v_from_adc(uint16_t adc) {
 
 int
 main(void) {
-    uint16_t            adc_sample;
     struct adc          adc;
     struct adc_event    adc_e;
 
@@ -136,13 +138,8 @@ main(void) {
 
     while(1) {
         adc_e.sample = adc_read(0);
-        if (adc.sma.lpos > SMA_SAMPLES_PER_SECONDS(60) && (adc.sma > 100 ? (adc.sma > adc.sma_prev + 100 || adc.sma < adc.sma_prev - 100) : (adc.sma > adc.sma_prev * 1.7 || adc.sma < adc.sma_prev * 0.3))) {
-            adc_e.super_.signal = ADC_CALIBRATION_SIG;
-            goto dispatch;
-        }
         adc_e.super_.signal = ADC_NEW_SAMPLE_SIG;
-dispatch:
-        FSM_DISPATCH_((struct fsm*)&k, (struct fsm_event*)&ke);
+        FSM_DISPATCH_((struct fsm*)&adc, (struct fsm_event*)&adc_e);
         _delay_loop_2(10);               /* using 16 bit counter, 10 loops, each of them takes 4 CPU cycles, so if F_CPU is 1MHz this does busy waiting for 40 microseconds */
     }
 }
@@ -157,47 +154,68 @@ void adc_ctor(struct adc* me) {
 void adc_initial(struct adc* me, struct adc_event* e) {
     (void) e;
     ports_init();
-    adc_init();
+    adc_init(me);
     FSM_TRANSITION_(&me->super_, &adc_default);
 }
 
 void adc_default(struct adc* me, struct adc_event* e) {
+    uint8_t sma;
+
     if (me == NULL || e == NULL) {
         return;
     }
     switch (e->super_.signal) {
-        case ADC_CALIBRATION_SIG:
-            RESET_SMA_BUF(&adc.sma);    /* reset SMA buffer => start calibration */
-            FSM_TRANSITION_(&me->super_, &adc_calibration);         /* do the state transition */
-            FSM_DISPATCH_((struct fsm*)&me, (struct fsm_event*)&e); /* also process current sample, don't loose the sample */
-            break;
         case ADC_NEW_SAMPLE_SIG:
+            if (TCNT1 >= SMA_FREQUENCY) {   /* 1s passed */
+                APPEND_SMA_VAL(&me->sma, MIN(255, e->sample / 4)); /* buffer stores uint8_t */
+                TCNT1 = 0;                  /* reset timer counter */
+            }
             adc_flash(me, e);
+            sma = me->sma.sma;
+            if (me->sma.lpos >= SMA_SAMPLES_PER_SECONDS(60) && (sma > 100 ? (sma > me->sma_prev + 100 || sma < me->sma_prev - 100) : (sma > me->sma_prev * 1.7 || sma < me->sma_prev * 0.3))) {
+                FSM_TRANSITION_(&me->super_, &adc_calibration);         /* start calibration, do the state transition */
+            }
+            break;
+        default:
             break;
     }
 }
 
 void adc_calibration(struct adc* me, struct adc_event* e) {
-    uint16_t adc_sample;
-
     if (me == NULL || e == NULL) {
         return;
     }
-    adc_sample = e.sample;
     switch (e->super_.signal) {
         case ADC_CALIBRATION_SIG:
+            PORTD |= (1 << PD0);        /* start calibration */
+            RESET_SMA_BUF(&me->sma);    /* reset SMA buffer and append new value */
         case ADC_NEW_SAMPLE_SIG:
-            APPEND_SMA_VAL(&adc.sma, adc_sample / 2); /* buffer stores uint8_t */
+            if (TCNT1 >= SMA_FREQUENCY) {   /* 1s passed */
+                APPEND_SMA_VAL(&me->sma, MIN(255, e->sample / 4)); /* buffer stores uint8_t */
+                TCNT1 = 0;                  /* reset timer counter */
+                if (me->sma.lpos >= SMA_SAMPLES_PER_SECONDS(30)) {
+                    me->sma_prev = me->sma.sma;
+                    me->resolution = MIN(me->sma.sma, 255 - me->sma.sma) / 4;   /* classification segment length */
+                    PORTD &= ~(1 << PD0);
+                    FSM_TRANSITION_(&me->super_, &adc_default); /* stop calibration */
+                }
+                break;
+            }
+        default:
             break;
     }
 }
 
 void adc_flash(struct adc* me, struct adc_event* e) {
-    uint16_t adc_sample;
+    uint8_t adc_sample;
+    uint8_t resolution;
+    uint8_t sma;
     if (me == NULL || e == NULL) {
         return;
     }
-    adc_sample = e.sample;
+    adc_sample = e->sample;
+    resolution = me->resolution;
+    sma = me->sma.sma;
     if (adc_sample > sma + 3 * resolution) {
         PORTC = 0b11111111;         /* set all HIGH */
     } else if (adc_sample > sma + 2 * resolution) {
