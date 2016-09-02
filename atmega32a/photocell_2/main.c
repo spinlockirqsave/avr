@@ -135,6 +135,8 @@ main(void) {
     struct adc_event    adc_e;
 
     adc_ctor(&adc);
+    ports_init();
+    adc_init(&adc);
 
     while(1) {
         adc_e.sample = adc_read(0);
@@ -153,8 +155,6 @@ void adc_ctor(struct adc* me) {
 
 void adc_initial(struct adc* me, struct adc_event* e) {
     (void) e;
-    ports_init();
-    adc_init(me);
     FSM_TRANSITION_(&me->super_, &adc_default);
 }
 
