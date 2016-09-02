@@ -134,9 +134,9 @@ main(void) {
     struct adc          adc;
     struct adc_event    adc_e;
 
-    adc_ctor(&adc);
     ports_init();
     adc_init(&adc);
+    adc_ctor(&adc);
 
     while(1) {
         adc_e.sample = adc_read(0);
