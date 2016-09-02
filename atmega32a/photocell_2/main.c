@@ -81,24 +81,23 @@ enum {
 };
 
 /* Override fsm methods. */
-void adc_ctor(struct adc* me);
-void adc_initial(struct adc* me, struct adc_event* e);
-void adc_default(struct adc* me, struct adc_event* e);
-void adc_calibration(struct adc* me, struct adc_event* e);
-void adc_flash(struct adc* me, struct adc_event* e);
+static void adc_ctor(struct adc* me);
+static void adc_initial(struct adc* me, struct adc_event* e);
+static void adc_default(struct adc* me, struct adc_event* e);
+static void adc_calibration(struct adc* me, struct adc_event* e);
+static void adc_flash(struct adc* me, struct adc_event* e);
 
 /* @brief   Initialize ADC */
-void adc_init(struct adc * adc) {
+static void adc_init(void) {
     ADMUX = 1 << REFS0; /* set up voltage reference to AVCC */
     ADCSRA = (1 << ADPS2);   /* set prescaler mode to 16: 1MHz/16 = 62.5kHz so it fits into 50kHz - 200kHz suggested in datasheet */
     ADCSRA |= (1 << ADEN); /* enable ADC */
     TCCR1B |= ((1 << CS11) | (1 << CS10));   /* use 16 bit timer, set timer prescaler to 64 mode, 1 tick = 1 / (F_CPU/64) s => 1 tick = (1/15625)s = 0.000064s, 15625 ticks/s */
     TCNT1 = 0; /* reset/start */
-    memset(adc, 0, sizeof(struct adc));
 }
 
 /* @brief   Return ADC sample. */
-uint16_t adc_read(uint8_t channel) {
+static uint16_t adc_read(uint8_t channel) {
     channel &= 0x07;    /* assert channel is between 0-7 inclusive */
     ADMUX = (ADMUX & 0xF8) | channel;   /* set multiplexer, clear bottom 3 bits before ORing. In Single Conversion mode, always select the channel before starting the conversion. */
     ADCSRA |= (1 << ADSC);  /* START single conversion, This bit stays high as long as the conversion is in progress and will be cleared by hardware when the conversion is completed. */
@@ -107,7 +106,7 @@ uint16_t adc_read(uint8_t channel) {
 }
 
 /* @brief   Initialize port pins to be output direction. */
-void ports_init(void) {
+static void ports_init(void) {
     DDRC = 0xFF;    /* set all PORTC to OUTPUT */
     PORTC = 0x00;   /* set LOW all output port pins */
     DDRB = 0xFF;    /* set as output - this will be our control interface */
@@ -115,19 +114,18 @@ void ports_init(void) {
 }
 
 /* @brief   ADC reading from voltage.
- * @details Voltage in mV for proper arithmetic without truncation. */
-uint16_t adc_from_v(uint16_t v) {
-    uint32_t tmp = v << 10;  /* V * 1024 */
+ * @details Voltage in mV for proper arithmetic without truncation.
+static uint16_t adc_from_v(uint16_t v) {
+    uint32_t tmp = v << 10;  V * 1024 
     return ((tmp / (V_REF * 1000)) & 0xFFFF);
-}
+} */
 
 /* @brief   Voltage reading from ADC sample.
- * @details Result in mV. */
-uint16_t v_from_adc(uint16_t adc) {
+ * @details Result in mV. 
+static uint16_t v_from_adc(uint16_t adc) {
     uint32_t tmp = adc * V_REF *1000;
     return ((tmp >> 10) & 0xFFFF);
-}
-
+} */
 
 int
 main(void) {
@@ -135,7 +133,7 @@ main(void) {
     struct adc_event    adc_e;
 
     ports_init();
-    adc_init(&adc);
+    adc_init();
     adc_ctor(&adc);
 
     while(1) {
@@ -146,19 +144,37 @@ main(void) {
     }
 }
 
-void adc_ctor(struct adc* me) {
+/* @brief   Flash PORTD pin 0 to signal failure. */
+static void adc_signal_malloc_failure(void) {
+    uint8_t n;
+    while (1) {
+        PORTD ^= (~PORTD | (1 << PD0));
+        n = 0;
+        while (n++ < 4) { /* 1.048576s delay */
+            _delay_loop_2(0);   /* 65536 loops * 4 cycles * 1microsecond = 0.262144s */
+        }
+    }
+}
+
+static void adc_ctor(struct adc* me) {
     if (me == NULL) {
+        return;
+    }
+    memset(me, 0, sizeof(struct adc));
+    INIT_SMA_BUF(&me->sma, SMA_SAMPLES_PER_SECONDS(60));
+    if (me->sma.data == NULL) {
+        adc_signal_malloc_failure();
         return;
     }
     FSM_CTOR_(&me->super_, &adc_initial);
 }
 
-void adc_initial(struct adc* me, struct adc_event* e) {
+static void adc_initial(struct adc* me, struct adc_event* e) {
     (void) e;
     FSM_TRANSITION_(&me->super_, &adc_default);
 }
 
-void adc_default(struct adc* me, struct adc_event* e) {
+static void adc_default(struct adc* me, struct adc_event* e) {
     uint8_t sma;
 
     if (me == NULL || e == NULL) {
@@ -181,7 +197,7 @@ void adc_default(struct adc* me, struct adc_event* e) {
     }
 }
 
-void adc_calibration(struct adc* me, struct adc_event* e) {
+static void adc_calibration(struct adc* me, struct adc_event* e) {
     if (me == NULL || e == NULL) {
         return;
     }
@@ -206,7 +222,7 @@ void adc_calibration(struct adc* me, struct adc_event* e) {
     }
 }
 
-void adc_flash(struct adc* me, struct adc_event* e) {
+static void adc_flash(struct adc* me, struct adc_event* e) {
     uint8_t adc_sample;
     uint8_t resolution;
     uint8_t sma;

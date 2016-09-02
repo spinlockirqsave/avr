@@ -29,7 +29,7 @@ struct sma_buf{
 	(void)memset((b), 0, sizeof(struct sma_buf)); \
 	(b)->len = (l); \
 	(b)->data = (BUFF_TYPE *) malloc(sizeof(BUFF_TYPE) * (l)); \
-	(b)->sma = 0.0; \
+	(b)->sma = 0; \
 	(b)->pos = 0; \
 	(b)->lpos = 0; \
     }
@@ -56,7 +56,7 @@ struct sma_buf{
 
 #define RESET_SMA_BUF(b) \
 { \
-    (b)->sma = 0.0; \
+    (b)->sma = 0; \
     (void)memset((b)->data, 0, sizeof(BUFF_TYPE) * (b)->len); \
     (b)->pos = 0; \
     (b)->lpos = 0; \
