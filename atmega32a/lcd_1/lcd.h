@@ -9,10 +9,6 @@
 #define LCD_COL_COUNT 16
 #define LCD_ROW_COUNT 2
 
-#define LCD_RS 0
-#define LCD_RW 1
-#define LCD_EN 2
-#define LCD_BF 7
 
 typedef struct lcd_port_s {
 	volatile uint8_t *ddr;

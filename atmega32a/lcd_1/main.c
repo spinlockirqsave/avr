@@ -1,8 +1,8 @@
-#define __DELAY_BACKWARD_COMPATIBLE__
+//#define __DELAY_BACKWARD_COMPATIBLE__
 
-#ifndef F_CPU
-#define F_CPU 1000000UL
-#endif
+//#ifndef F_CPU
+//#define F_CPU 1000000UL
+//#endif
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -12,9 +12,9 @@
 int main(void)
 {
 	lcd_configuration_t  lcd_config = {
-		.lcd_port_rs = { &DDRC, &PORTC, &PINC, 0 },
-		.lcd_port_rw = { &DDRC, &PORTC, &PINC, 1 },
-		.lcd_port_en = { &DDRC, &PORTC, &PINC, 2 },
+		.lcd_port_rs = { &DDRC, &PORTC, &PINC, 5 },
+		.lcd_port_rw = { &DDRC, &PORTC, &PINC, 6 },
+		.lcd_port_en = { &DDRC, &PORTC, &PINC, 7 },
 		.lcd_port_d0 = { &DDRD, &PORTD, &PIND, 0 },
 		.lcd_port_d1 = { &DDRD, &PORTD, &PIND, 1 },
 		.lcd_port_d2 = { &DDRD, &PORTD, &PIND, 2 },
@@ -29,5 +29,16 @@ int main(void)
 	};
 
 	lcd_init(&lcd_config);
-	lcd_display("OK\n");
+
+	while (1) {
+		_delay_ms(3000);
+		lcd_exec_instruction_clear_display();		// clear display RAM
+		_delay_ms(4);                                   // 1.64 mS delay (min)
+		lcd_puts("It's Friday!");
+
+		_delay_ms(2000);
+		lcd_exec_instruction_clear_display();		// clear display RAM
+		_delay_ms(4);                                   // 1.64 mS delay (min)
+		lcd_puts("then Saturday, Sunday, woah!");
+	}
 }

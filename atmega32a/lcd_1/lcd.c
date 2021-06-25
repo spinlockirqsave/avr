@@ -2,9 +2,9 @@
 
 
 struct lcd_configuration_s  lcd_default_config = {
-	.lcd_port_rs = { &DDRC, &PORTC, &PINC, 0 },
-	.lcd_port_rw = { &DDRC, &PORTC, &PINC, 1 },
-	.lcd_port_en = { &DDRC, &PORTC, &PINC, 2 },
+	.lcd_port_rs = { &DDRC, &PORTC, &PINC, 5 },
+	.lcd_port_rw = { &DDRC, &PORTC, &PINC, 6 },
+	.lcd_port_en = { &DDRC, &PORTC, &PINC, 7 },
 	.lcd_port_d0 = { &DDRD, &PORTD, &PIND, 0 },
 	.lcd_port_d1 = { &DDRD, &PORTD, &PIND, 1 },
 	.lcd_port_d2 = { &DDRD, &PORTD, &PIND, 2 },
@@ -116,12 +116,43 @@ void lcd_init(lcd_configuration_t *config)
 
 		// Configuration of Function Set register is completed.
 	}
+
+	// Preliminary Function Set instruction - used only to set the 4-bit mode.
+// The number of lines or the font cannot be set at this time since the controller is still in the
+//  8-bit mode, but the data transfer mode can be changed since this parameter is determined by one 
+//  of the upper four bits of the instruction.
+ 
+    _delay_us(80);                                  // 40uS delay (min)
+
+// The next three instructions are specified in the data sheet as part of the initialization routine, 
+//  so it is a good idea (but probably not necessary) to do them just as specified and then redo them 
+//  later if the application requires a different configuration.
+
+// Display On/Off Control instruction
+    lcd_exec_instruction_display_control(0, 0, 0);        // turn display OFF
+    _delay_us(80);                                  // 40uS delay (min)
+
+// Clear Display instruction
+	lcd_exec_instruction_clear_display();		// clear display RAM
+    _delay_ms(4);                                   // 1.64 mS delay (min)
+
+// ; Entry Mode Set instruction
+	lcd_exec_instruction_entry_mode_set(1, 0);
+    _delay_us(80);                                  // 40uS delay (min)
+
+// This is the end of the LCD controller initialization as specified in the data sheet, but the display
+//  has been left in the OFF condition.  This is a good time to turn the display back ON.
+ 
+// Display On/Off Control instruction
+    lcd_exec_instruction_display_control(1, 1, 1);        // turn display ON
+    _delay_us(80);                                  // 40uS delay (min)
 }
 
 void lcd_puts(char *str)
 {
-	for (char *c = str; c && c != '\0'; c++) {
+	for (char *c = str; c && *c != '\0'; c++) {
 		lcd_exec_instruction_write_data(*c);
+		_delay_us(80);                              // 40 uS delay (min)
 	}
 }
 
@@ -420,12 +451,10 @@ void lcd_signal_data_rx()
 
 void lcd_latch()
 {
-	lcd_set_port_low(&lcd_config->lcd_port_en);
-	_delay_ms(1);
 	lcd_set_port_high(&lcd_config->lcd_port_en);
-	_delay_us(10);
+	_delay_us(1);
 	lcd_set_port_low(&lcd_config->lcd_port_en);
-	_delay_ms(1);
+	_delay_us(1);
 }
 
 uint8_t lcd_read_port(lcd_port_t *p)
