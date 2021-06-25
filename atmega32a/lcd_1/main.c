@@ -6,8 +6,23 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/interrupt.h>
 
 #include "lcd.h"
+
+
+uint8_t seconds = 0;
+
+ISR (TIMER1_OVF_vect)    // Timer1 ISR
+{
+	TCNT1 = 63974;   // for 1 sec at 16 MHz
+
+	lcd_exec_instruction_clear_display();		// clear display RAM
+	_delay_ms(4);                               // 1.64 mS delay (min)
+
+	seconds++;
+	lcd_printf("%u", seconds);
+}
 
 int main(void)
 {
@@ -30,22 +45,13 @@ int main(void)
 
 	lcd_init(&lcd_config);
 
-	TCCR1B = (1 << CS10) | (1 << CS12);				//set the pre-scalar as 1024
-	OCR1A = 1562;									// 100 ms delay
-	TCNT1 = 0;
-	uint8_t seconds = 0;
+	TCNT1 = 63974;							// for 1 sec at 16 MHz
+	TCCR1A = 0x00;
+	TCCR1B = (1 << CS10) | (1 << CS12);		// Timer mode with 1024 prescaler
+	TIMSK = (1 << TOIE1) ;					// Enable timer1 overflow interrupt(TOIE1)
+	sei();									// Enable global interrupts by setting global interrupt enable bit in SREG
+
 
 	while (1) {
-
-		while ((TIFR & (1 << OCF1A)) == 0);			// wait till the timer overflow flag is SET
-
-		TCNT1 = 0;
-		TIFR |= (1 << OCF1A) ;						//clear timer1 overflow flag
-
-		lcd_exec_instruction_clear_display();		// clear display RAM
-		_delay_ms(4);                               // 1.64 mS delay (min)
-		
-		seconds++;
-		lcd_printf("%u", seconds);
 	}
 }
