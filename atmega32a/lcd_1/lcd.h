@@ -8,6 +8,8 @@
 
 #define LCD_COL_COUNT 16
 #define LCD_ROW_COUNT 2
+#define LCD_DDRAM_LINE_ONE_ADDRESS 0x00
+#define LCD_DDRAM_LINE_TWO_ADDRESS 0x40
 
 
 typedef struct lcd_port_s {
@@ -41,8 +43,22 @@ void lcd_init(lcd_configuration_t *config);
 
 /*
  * Display string on LCD.
+ * Start on 1st line, if string doesn't fit (it's more than 16 chars) wrap it up and start from 2nd line (if 2 lines are used).
  */
-void lcd_puts(char *string);
+void lcd_puts(char *str);
+
+/*
+ * Display string on LCD.
+ * Start on 1st line, if string doesn't fit (it's more than 16 chars) ignore remaining chars and return.
+ */
+void lcd_puts_1st_line(char *str);
+
+/*
+ * Display string on LCD.
+ * Start on 2nd line, if string doesn't fit (it's more than 16 chars) ignore remaining chars and return.
+ */
+void lcd_puts_2nd_line(char *str);
+
 #define lcd_display(s) lcd_puts(s)
 
 /*

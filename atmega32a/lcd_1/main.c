@@ -1,7 +1,7 @@
 //#define __DELAY_BACKWARD_COMPATIBLE__
 
 #ifndef F_CPU
-#define F_CPU 16000000UL
+#define F_CPU 1000000UL
 #endif
 
 #include <avr/io.h>
@@ -11,7 +11,28 @@
 #include "lcd.h"
 
 
-uint8_t seconds = 0;
+uint8_t	seconds = 0;
+uint8_t	minutes = 0;
+uint8_t	hours = 0;
+char	time_buf[16] = { 0 };
+
+static void time_2_str(char *buf, uint8_t buflen)
+{
+	snprintf(buf, buflen, "%u:%u:%u", hours, minutes, seconds);
+}
+
+static void timer_tick(void)
+{
+	seconds++;
+	if (seconds == 60) {
+		minutes++;
+		if (minutes == 60) {
+			hours++;
+			minutes = 0;
+		}
+		seconds = 0;
+	}
+}
 
 ISR (TIMER1_OVF_vect)    // Timer1 ISR
 {
@@ -20,8 +41,9 @@ ISR (TIMER1_OVF_vect)    // Timer1 ISR
 	lcd_exec_instruction_clear_display();		// clear display RAM
 	_delay_ms(4);                               // 1.64 mS delay (min)
 
-	seconds++;
-	lcd_printf("%u", seconds);
+	timer_tick();
+	time_2_str(time_buf, sizeof(time_buf));
+	lcd_printf("%s", time_buf);
 }
 
 int main(void)
@@ -45,12 +67,19 @@ int main(void)
 
 	lcd_init(&lcd_config);
 
+	lcd_puts_1st_line("Timer: MiSW 2021");
+	lcd_puts_2nd_line("Piotr Gregor");
+	int i = 0;
+	while (i < 500) {
+		_delay_ms(10);
+		++i;
+	}
+
 	TCNT1 = 63974;							// for 1 sec at 16 MHz
 	TCCR1A = 0x00;
 	TCCR1B = (1 << CS10) | (1 << CS12);		// Timer mode with 1024 prescaler
 	TIMSK = (1 << TOIE1) ;					// Enable timer1 overflow interrupt(TOIE1)
 	sei();									// Enable global interrupts by setting global interrupt enable bit in SREG
-
 
 	while (1) {
 	}

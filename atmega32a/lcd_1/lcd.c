@@ -150,7 +150,38 @@ void lcd_init(lcd_configuration_t *config)
 
 void lcd_puts(char *str)
 {
-	for (char *c = str; c && *c != '\0'; c++) {
+	uint8_t n = 0;
+
+	lcd_exec_instruction_set_ddram_address(LCD_DDRAM_LINE_ONE_ADDRESS);
+
+	for (char *c = str; c && *c != '\0' && n < LCD_COL_COUNT; c++, n++) {
+		if (n == LCD_COL_COUNT) {
+			lcd_exec_instruction_set_ddram_address(LCD_DDRAM_LINE_TWO_ADDRESS);
+		}
+		lcd_exec_instruction_write_data(*c);
+		_delay_us(80);                              // 40 uS delay (min)
+	}
+}
+
+void lcd_puts_1st_line(char *str)
+{
+	uint8_t n = 0;
+
+	lcd_exec_instruction_set_ddram_address(LCD_DDRAM_LINE_ONE_ADDRESS);
+
+	for (char *c = str; c && *c != '\0' && n < LCD_COL_COUNT; c++, n++) {
+		lcd_exec_instruction_write_data(*c);
+		_delay_us(80);                              // 40 uS delay (min)
+	}
+}
+
+void lcd_puts_2nd_line(char *str)
+{
+	uint8_t n = 0;
+
+	lcd_exec_instruction_set_ddram_address(LCD_DDRAM_LINE_TWO_ADDRESS);
+
+	for (char *c = str; c && *c != '\0' && n < LCD_COL_COUNT; c++, n++) {
 		lcd_exec_instruction_write_data(*c);
 		_delay_us(80);                              // 40 uS delay (min)
 	}
