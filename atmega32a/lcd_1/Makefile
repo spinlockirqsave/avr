@@ -1,7 +1,7 @@
 src=main
 avrType=atmega32a
 avrTypeDesc=m32
-avrFreq=1000000 # 1MHz
+avrFreq=16000000 # 1MHz
 programmerType=usbasp
 
 cflags=-g -DF_CPU=$(avrFreq) -Wall -Os -Werror -Wextra
