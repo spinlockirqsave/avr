@@ -62,13 +62,13 @@ int main(void)
 		.lcd_port_d7 = { &DDRD, &PORTD, &PIND, 7 },
 		.want_8_bit_mode = 1,
 		.want_display_2_lines = 1,
-		.want_dotes_5x10 = 0,
+		.want_dotes_5x10 = 1,
 	};
 
 	lcd_init(&lcd_config);
 
-	lcd_puts_1st_line("Timer: MiSW 2021");
-	lcd_puts_2nd_line("Piotr Gregor");
+	lcd_display_1st_line("Timer: MiSW 2021");
+	lcd_display_2nd_line("Piotr Gregor");
 	int i = 0;
 	while (i < 500) {
 		_delay_ms(10);
