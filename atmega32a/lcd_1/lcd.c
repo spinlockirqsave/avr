@@ -50,10 +50,11 @@ void lcd_configure_port_as_output(lcd_port_t *p);
 
 void lcd_init(lcd_configuration_t *config)
 {
-	uint8_t want_8_bit_mode = 0;
+	uint8_t want_8_bit_mode = 1;
 
 	if (config) {
 		lcd_config = config;
+		want_8_bit_mode = lcd_config->want_8_bit_mode;
 	}
 
 	_delay_ms(100);
@@ -80,7 +81,6 @@ void lcd_init(lcd_configuration_t *config)
 	 * 3 times guarantees LCD will be put into right bit mode. Execute commands in 4 bit bus mode,
 	 * as single transfers to D7-D4.
 	 */
-	want_8_bit_mode = 1;
 	lcd_exec_instruction_function_reset(want_8_bit_mode);
 	_delay_ms(10); 
 	lcd_exec_instruction_function_reset(want_8_bit_mode);
@@ -95,24 +95,22 @@ void lcd_init(lcd_configuration_t *config)
 	 * and a full 4 bit bus Function Set command sequence (two enables with command bits 7-4 and 3-0 on subsequent cycles)
 	 * will complete the configuration of the Function Set register.
 	 */
-	if (lcd_config->want_8_bit_mode) {
+	if (want_8_bit_mode) {
 
 		// Set  complete options for desired 8 bit mode
-		want_8_bit_mode = 1;
-		lcd_exec_instruction_function_set(want_8_bit_mode, lcd_config->want_display_2_lines, lcd_config->want_dotes_5x10);
+		lcd_exec_instruction_function_set(1, lcd_config->want_display_2_lines, lcd_config->want_dotes_5x10);
 
 		// Configuration of Function Set register is completed.
 
 	} else {
 
 		// Set  options for desired 4 bit mode
-		want_8_bit_mode = 0;
 
 		// First, execute single cycle (4 bit bus) Function Set command to enter 4 bit mode 
-		lcd_exec_instruction_function_reset(want_8_bit_mode);
+		lcd_exec_instruction_function_reset(0);
 
 		// Now LCD is in 4 bit mode. Execute complete Function Set command with standard transmit of 8 bits in 2 write cycles, setting all D7-D0 LCD bits.
-		lcd_exec_instruction_function_set(want_8_bit_mode, lcd_config->want_display_2_lines, lcd_config->want_dotes_5x10);
+		lcd_exec_instruction_function_set(0, lcd_config->want_display_2_lines, lcd_config->want_dotes_5x10);
 
 		// Configuration of Function Set register is completed.
 	}

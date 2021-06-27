@@ -81,6 +81,14 @@ int main(void)
 	TIMSK = (1 << TOIE1) ;					// Enable timer1 overflow interrupt(TOIE1)
 	sei();									// Enable global interrupts by setting global interrupt enable bit in SREG
 
+	// toggle the diode every 1s
+	DDRC |= (1 << DDRC4);
 	while (1) {
+		int i = 0;
+		while (i < 100) {
+			_delay_ms(10);
+			++i;
+		}
+		PORTC = (PORTC ^ (1 << PORTC4));
 	}
 }
