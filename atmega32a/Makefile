@@ -1,7 +1,7 @@
 src=main
 avrType=atmega32a
 avrTypeDesc=m32
-avrFreq=4000000 # 4MHz for accurate baudrate timing
+avrFreq=1000000
 programmerType=usbasp
 
 cflags=-g -DF_CPU=$(avrFreq) -Wall -Os -Werror -Wextra
