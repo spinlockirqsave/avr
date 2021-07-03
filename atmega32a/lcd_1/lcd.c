@@ -8,15 +8,15 @@ struct lcd_configuration_s  lcd_default_config = {
 	.lcd_port_rs = { &DDRC, &PORTC, &PINC, 5 },
 	.lcd_port_rw = { &DDRC, &PORTC, &PINC, 6 },
 	.lcd_port_en = { &DDRC, &PORTC, &PINC, 7 },
-	.lcd_port_d0 = { &DDRD, &PORTD, &PIND, 0 },
-	.lcd_port_d1 = { &DDRD, &PORTD, &PIND, 1 },
-	.lcd_port_d2 = { &DDRD, &PORTD, &PIND, 2 },
-	.lcd_port_d3 = { &DDRD, &PORTD, &PIND, 3 },
+	.lcd_port_d0 = { 0 },
+	.lcd_port_d1 = { 0 },
+	.lcd_port_d2 = { 0 },
+	.lcd_port_d3 = { 0 },
 	.lcd_port_d4 = { &DDRD, &PORTD, &PIND, 4 },
 	.lcd_port_d5 = { &DDRD, &PORTD, &PIND, 5 },
 	.lcd_port_d6 = { &DDRD, &PORTD, &PIND, 6 },
 	.lcd_port_d7 = { &DDRD, &PORTD, &PIND, 7 },
-	.want_8_bit_mode = 1,
+	.want_8_bit_mode = 0,
 	.want_display_2_lines = 1,
 	.want_dotes_5x10 = 0,
 };
@@ -65,22 +65,12 @@ void lcd_init(lcd_configuration_t *config)
 	lcd_configure_control_ports_as_output(lcd_config);
 
 	// Configure data port as output
-	lcd_configure_port_as_output(&lcd_config->lcd_port_d7);
-	lcd_configure_port_as_output(&lcd_config->lcd_port_d6);
-	lcd_configure_port_as_output(&lcd_config->lcd_port_d5);
-	lcd_configure_port_as_output(&lcd_config->lcd_port_d4);
-
-	if (config->want_8_bit_mode) {
-		lcd_configure_port_as_output(&lcd_config->lcd_port_d3);
-		lcd_configure_port_as_output(&lcd_config->lcd_port_d2);
-		lcd_configure_port_as_output(&lcd_config->lcd_port_d1);
-		lcd_configure_port_as_output(&lcd_config->lcd_port_d0);
-	}
+	lcd_configure_data_ports_as_output(lcd_config);
 
 	/*
-	 * LCD may be in unknown state. Before it can be configured to the full set of desired options
-	 * it must be configured to the right bit mode (4/8). Writing same command to set desired bit mode
-	 * 3 times guarantees LCD will be put into 8 bit mode. Execute commands as single transfers to D7-D4.
+	 * LCD is in an unknown state now. Before it can be configured to the full set of desired options
+	 * it must be configured to the right bit mode (4/8). Writing reset command with 8 bit mode flag set
+	 * by 3 times, guarantees LCD will be put into 8 bit mode. Execute commands as single transfers to D7-D4.
 	 */
 	bit_mode_8 = 1;
 	lcd_exec_instruction_function_reset(bit_mode_8);
@@ -120,35 +110,23 @@ void lcd_init(lcd_configuration_t *config)
 		// Configuration of Function Set register is completed.
 	}
 
-	// Preliminary Function Set instruction - used only to set the 4-bit mode.
-// The number of lines or the font cannot be set at this time since the controller is still in the
-//  8-bit mode, but the data transfer mode can be changed since this parameter is determined by one 
-//  of the upper four bits of the instruction.
- 
-    _delay_us(80);                                  // 40uS delay (min)
+	_delay_us(80);                                  // 40uS delay (min)
 
-// The next three instructions are specified in the data sheet as part of the initialization routine, 
-//  so it is a good idea (but probably not necessary) to do them just as specified and then redo them 
-//  later if the application requires a different configuration.
+	// Turn display OFF.
+	lcd_exec_instruction_display_control(0, 0, 0);
+	_delay_us(80);
 
-// Display On/Off Control instruction
-    lcd_exec_instruction_display_control(0, 0, 0);        // turn display OFF
-    _delay_us(80);                                  // 40uS delay (min)
+	// Clear dispaly RAM.
+	lcd_exec_instruction_clear_display();
+	_delay_ms(4);
 
-// Clear Display instruction
-	lcd_exec_instruction_clear_display();		// clear display RAM
-    _delay_ms(4);                                   // 1.64 mS delay (min)
-
-// ; Entry Mode Set instruction
+	// Set cursor increment and no display shift.
 	lcd_exec_instruction_entry_mode_set(1, 0);
-    _delay_us(80);                                  // 40uS delay (min)
+	_delay_us(80);
 
-// This is the end of the LCD controller initialization as specified in the data sheet, but the display
-//  has been left in the OFF condition.  This is a good time to turn the display back ON.
- 
-// Display On/Off Control instruction
-    lcd_exec_instruction_display_control(1, 1, 1);        // turn display ON
-    _delay_us(80);                                  // 40uS delay (min)
+	// Turn display ON.
+	lcd_exec_instruction_display_control(1, 1, 1);
+	_delay_us(80);
 }
 
 void lcd_display(char *str)
