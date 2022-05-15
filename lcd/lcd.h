@@ -5,9 +5,9 @@
  * This is a driver for LCD devices based on Hitachi HD44780 chips,
  * like e.g. Blaze BCB1602-03x series.
  *
- * The driver can work with any pin configuration, all you need to do make things work
- * is to connect them and tell the driver about your selected pinout
- * by passing proper configuration to lcd_init().
+ * The driver can work with any pin configuration, all you need to do to make things work is:
+ * - connect pins
+ * - tell the driver about your selected pinout by passing proper configuration to lcd_init()
  *
  * To use this driver:
  *  - select your pins for LCD on microcontroller. 3 control pins are needed,
@@ -91,7 +91,7 @@
  *		.want_dotes_5x10 = 0,
  *	};
  *
- * Program exammple:
+ * Program example:
  *
  * lcd_init(&lcd_config);
  *

@@ -5,11 +5,9 @@
  * This is a driver for LCD devices based on Hitachi HD44780 chips,
  * like e.g. Blaze BCB1602-03x series.
  *
- * This driver offers flexibility regarding pin configuration.
- * It can work with any pin configuration, all you need to do make things working
- * is to connect pins you've chosen on Atmega with LCD,
- * and to tell the driver about your selected pinout,
- * by passing configuration struct reflecting that setup to lcd_init() (see below).
+ * The driver can work with any pin configuration, all you need to do to make things work is:
+ * - connect pins
+ * - tell the driver about your selected pinout by passing proper configuration to lcd_init()
  *
  * To use this driver:
  *  - select your pins for LCD on microcontroller. 3 control pins are needed,
@@ -22,9 +20,6 @@
  *  - call lcd_display_1st_line(), lcd_display_2nd_line(), lcd_display or lcd_printf(fmt, args) to display text on LCD
  *
  *  Example 4 bit mode connection and corresponding config:
- *
- *  lcd_port_d7 - lcd_port_d4 must be configured
- *  lcd_port_rs, lcd_port_rw, lcd_port_en must be configured
  *
  *                -----------                   ----------
  *               | ATmega32  |                 |   LCD    |
@@ -61,9 +56,6 @@
  *	};
  * 
  *  Example 8 bit mode connection and corresponding config:
- *
- *  lcd_port_d7 - lcd_port_d0 must be configured
- *  lcd_port_rs, lcd_port_rw, lcd_port_en must be configured
  *
  *                -----------                   ----------
  *               | ATmega32  |                 |   LCD    |
